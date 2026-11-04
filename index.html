@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeTop — ТОП-10 инструментов трейдинга</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117; --card: #161b22; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e; --accent: #00d97e; --red: #f6465d;
+  }
+  body.light {
+    --bg: #f5f7fa; --card: #ffffff; --border: #d0d7de;
+    --text: #1f2328; --muted: #57606a; --accent: #0a9d5c; --red: #d1242f;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Inter', sans-serif; line-height: 1.65;
+    transition: background .3s, color .3s;
+  }
+
+  .theme-btn {
+    position: fixed; top: 16px; right: 16px; z-index: 100;
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--text); font-size: 20px; width: 44px; height: 44px;
+    border-radius: 50%; cursor: pointer; transition: .2s;
+  }
+  .theme-btn:hover { border-color: var(--accent); transform: scale(1.1); }
+
+  .ticker { background: var(--card); border-bottom: 1px solid var(--border); overflow: hidden; white-space: nowrap; padding: 8px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+  .ticker-track { display: inline-block; animation: scroll 25s linear infinite; }
+  .ticker span { margin: 0 24px; }
+  .up { color: var(--accent); } .down { color: var(--red); }
+  @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  .hero { text-align: center; padding: 60px 20px 40px; background: radial-gradient(ellipse at top, rgba(0,217,126,0.12), transparent 60%); }
+  .hero h1 { font-size: clamp(26px, 5vw, 48px); font-weight: 800; letter-spacing: -1px; }
+  .hero h1 .accent { background: linear-gradient(90deg, var(--accent), #00b4d8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { color: var(--muted); max-width: 640px; margin: 16px auto 0; font-size: 16px; }
+
+  .calc { max-width: 1150px; margin: 0 auto 20px; padding: 24px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
+  .calc h2 { font-size: 20px; margin-bottom: 14px; }
+  .calc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: end; }
+  .calc label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .calc input { width: 100%; padding: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 15px; }
+  .calc input:focus { outline: none; border-color: var(--accent); }
+  .calc-result { padding: 12px 16px; background: rgba(0,217,126,0.1); border: 1px solid var(--accent); border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 15px; color: var(--accent); text-align: center; }
+
+  .chart-box { max-width: 1150px; margin: 0 auto 20px; padding: 24px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
+  .chart-box h2 { font-size: 20px; margin-bottom: 14px; }
+  canvas { width: 100%; height: 160px; display: block; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; max-width: 1150px; margin: 0 auto; padding: 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 24px; position: relative; cursor: pointer;
+    transition: transform .25s, border-color .25s, box-shadow .25s, opacity .6s;
+    opacity: 0; transform: translateY(30px);
+  }
+  .card.visible { opacity: 1; transform: translateY(0); }
+  .card:hover { border-color: var(--accent); box-shadow: 0 10px 30px rgba(0,217,126,0.10); }
+  .card .num { position: absolute; top: 16px; right: 20px; font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 700; color: var(--border); transition: color .25s; }
+  .card:hover .num, .card.open .num { color: var(--accent); }
+  .card .icon { font-size: 28px; }
+  .card h3 { margin: 10px 0 6px; font-size: 18px; font-weight: 600; }
+  .card .short { color: var(--muted); font-size: 14.5px; }
+  .tag { display: inline-block; margin-top: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; padding: 4px 10px; border-radius: 20px; background: rgba(0,217,126,0.12); color: var(--accent); }
+  .tag.risk { background: rgba(246,70,93,0.12); color: var(--red); }
+
+  .details { max-height: 0; overflow: hidden; transition: max-height .45s ease; }
+  .card.open .details { max-height: 3200px; }
+  .details-inner { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; }
+  .details-inner h4 { color: var(--accent); font-size: 13px; text-transform: uppercase; letter-spacing: .6px; margin: 14px 0 4px; }
+  .details-inner ul { padding-left: 18px; margin: 4px 0 8px; }
+  .details-inner li { margin: 3px 0; }
+  .details-inner b { color: var(--text); }
+  .details-inner .warn { color: var(--red); }
+  .details-inner .figure { display: block; width: 100%; margin: 10px 0 14px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border); padding: 8px; }
+
+  .hint { margin-top: 12px; font-size: 12px; color: #58a6ff; user-select: none; }
+  .hint::before { content: "▸ "; }
+  .card.open .hint::before { content: "▾ "; }
+
+  .about { max-width: 1150px; margin: 40px auto; padding: 0 20px; }
+  .about-wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+  .about-col { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 28px 24px; }
+  .about-col h2 { font-size: 22px; margin-bottom: 14px; }
+  .about-lead { color: var(--accent); font-weight: 600; margin-bottom: 14px; }
+  .about-col p { color: var(--muted); font-size: 14.5px; margin-bottom: 12px; }
+  .about-col h4 { color: var(--text); font-size: 15px; margin: 18px 0 8px; }
+  .about-list { list-style: none; padding: 0; }
+  .about-list li { color: var(--muted); font-size: 14px; padding: 5px 0 5px 20px; position: relative; }
+  .about-list li::before { content: "▸"; position: absolute; left: 0; color: var(--accent); }
+  .about-list b { color: var(--text); }
+  .about-goal { margin-top: 16px; padding: 14px; background: rgba(0,217,126,0.08); border-left: 3px solid var(--accent); border-radius: 8px; }
+
+  .rules { max-width: 1150px; margin: 40px auto; padding: 30px 24px; background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 14px; }
+  .rules h2 { font-size: 21px; margin-bottom: 14px; }
+  .rules ul { list-style: none; }
+  .rules li { padding: 7px 0 7px 28px; position: relative; color: var(--muted); }
+  .rules li::before { content: "✔"; position: absolute; left: 0; color: var(--accent); font-weight: bold; }
+
+  footer { text-align: center; padding: 30px 20px 50px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); margin-top: 40px; }
+</style>
+</head>
+<body>
+
+<button class="theme-btn" onclick="toggleTheme()" title="Сменить тему">🌙</button>
+
+<div class="ticker">
+  <div class="ticker-track">
+    <span>BTC/USD <b class="up">▲ +2.4%</b></span><span>ETH/USD <b class="up">▲ +1.8%</b></span>
+    <span>S&P 500 <b class="down">▼ -0.6%</b></span><span>EUR/USD <b class="up">▲ +0.3%</b></span>
+    <span>GOLD <b class="down">▼ -0.4%</b></span><span>NASDAQ <b class="up">▲ +1.1%</b></span>
+    <span>BTC/USD <b class="up">▲ +2.4%</b></span><span>ETH/USD <b class="up">▲ +1.8%</b></span>
+    <span>S&P 500 <b class="down">▼ -0.6%</b></span><span>EUR/USD <b class="up">▲ +0.3%</b></span>
+    <span>GOLD <b class="down">▼ -0.4%</b></span><span>NASDAQ <b class="up">▲ +1.1%</b></span>
+  </div>
+</div>
+
+<header class="hero">
+  <h1>ТОП-10 <span class="accent">инструментов</span> в трейдинге</h1>
+  <p>Подробный разбор каждого инструмента. Нажмите на карточку — раскроется полное описание, правила и типичные ошибки.</p>
+</header>
+
+<section class="chart-box">
+  <h2>📊 Демо-график (BTC/USD)</h2>
+  <canvas id="chart"></canvas>
+</section>
+
+<section class="calc">
+  <h2>🧮 Калькулятор риска</h2>
+  <div class="calc-grid">
+    <div><label>Депозит ($)</label><input type="number" id="dep" value="1000"></div>
+    <div><label>Риск на сделку (%)</label><input type="number" id="risk" value="1" step="0.1"></div>
+    <div><label>Стоп (пункты)</label><input type="number" id="stop" value="50"></div>
+    <div class="calc-result" id="calcOut">Объём: —</div>
+  </div>
+</section>
+
+<main class="grid" id="cards">
+
+  <!-- 1 -->
+  <div class="card">
+    <div class="num">01</div><div class="icon">📈</div>
+    <h3>График цены (свечи)</h3>
+    <p class="short">Основа анализа: тело, тени, паттерны.</p>
+    <span class="tag">Анализ</span>
+    <div class="details"><div class="details-inner">
+
+      <svg class="figure" viewBox="0 0 300 120" xmlns="http://www.w3.org/2000/svg">
+        <rect width="300" height="120" fill="none"/>
+        <line x1="20" y1="60" x2="280" y2="60" stroke="#30363d" stroke-dasharray="4"/>
+        <rect x="60" y="30" width="14" height="60" fill="#00d97e"/>
+        <line x1="67" y1="15" x2="67" y2="30" stroke="#00d97e" stroke-width="2"/>
+        <line x1="67" y1="90" x2="67" y2="105" stroke="#00d97e" stroke-width="2"/>
+        <rect x="120" y="45" width="14" height="30" fill="#f6465d"/>
+        <line x1="127" y1="20" x2="127" y2="45" stroke="#f6465d" stroke-width="2"/>
+        <line x1="127" y1="75" x2="127" y2="95" stroke="#f6465d" stroke-width="2"/>
+        <rect x="180" y="40" width="14" height="40" fill="#00d97e"/>
+        <line x1="187" y1="25" x2="187" y2="40" stroke="#00d97e" stroke-width="2"/>
+        <line x1="187" y1="80" x2="187" y2="100" stroke="#00d97e" stroke-width="2"/>
+        <rect x="240" y="50" width="14" height="25" fill="#f6465d"/>
+        <line x1="247" y1="30" x2="247" y2="50" stroke="#f6465d" stroke-width="2"/>
+        <line x1="247" y1="75" x2="247" y2="90" stroke="#f6465d" stroke-width="2"/>
+        <text x="65" y="115" fill="#8b949e" font-size="9" text-anchor="middle">бычья</text>
+        <text x="127" y="115" fill="#8b949e" font-size="9" text-anchor="middle">медвежья</text>
+      </svg>
+
+      <h4>Что это</h4>
+      <p>Свечной график — базовый инструмент трейдера. Каждая свеча = один временной период (1 мин, 1 час, 1 день и т.д.). У свечи есть <b>тело</b> (от открытия до закрытия) и <b>тени/фитили</b> (максимум и минимум цены за период).</p>
+      <h4>Как читать</h4>
+      <ul>
+        <li><b>Бычья свеча</b> (зелёная) — закрытие выше открытия, покупатели сильнее.</li>
+        <li><b>Медвежья свеча</b> (красная) — закрытие ниже открытия, продавцы давят.</li>
+        <li>Длинная тень снизу = покупатели откупили падение (сильный спрос).</li>
+        <li>Длинная тень сверху = продавцы продавили рост (сильное предложение).</li>
+        <li>Маленькое тело + длинные тени = нерешительность рынка.</li>
+      </ul>
+      <h4>Ключевые паттерны</h4>
+      <ul>
+        <li><b>Доджи</b> — открытие ≈ закрытие. Пауза или разворот.</li>
+        <li><b>Молот</b> — маленькое тело сверху, длинная тень вниз. Разворот вверх.</li>
+        <li><b>Повешенный</b> — то же, но после роста. Сигнал вниз.</li>
+        <li><b>Бычье/медвежье поглощение</b> — большая свеча «съедает» предыдущую.</li>
+      </ul>
+      <h4>Как применять</h4>
+      <p>Смотрите таймфреймы сверху вниз: неделя → день → час → 15 мин. Паттерн у сильного уровня весит в разы больше, чем посреди «пустого» графика.</p>
+      <h4 class="warn">Ошибка новичка</h4><p>Торговать каждый паттерн без учёта тренда и уровня.</p>
+    </div></div>
+    <div class="hint">Нажмите, чтобы раскрыть</div>
+  </div>
+
+  <!-- 2 -->
+  <div class="card">
+    <div class="num">02</div><div class="icon">📊</div>
+    <h3>Поддержка и сопротивление</h3>
+    <p class="short">Зоны, где цена разворачивалась.</p>
+    <span class="tag">Анализ</span>
+    <div class="details"><div class="details-inner">
+
+      <svg class="figure" viewBox="0 0 300 120" xmlns="http://www.w3.org/2000/svg">
+        <line x1="20" y1="30" x2="280" y2="30" stroke="#f6465d" stroke-width="2" stroke-dasharray="6"/>
+        <text x="25" y="24" fill="#f6465d" font-size="9">Сопротивление</text>
+        <line x1="20" y1="90" x2="280" y2="90" stroke="#00d97e" stroke-width="2" stroke-dasharray="6"/>
+        <text x="25" y="105" fill="#00d97e" font-size="9">Поддержка</text>
+        <polyline points="30,60 60,90 90,30 120,90 150,30 180,90 210,30 240,90 270,60"
+                  fill="none" stroke="#e6edf3" stroke-width="2"/>
+      </svg>
+
+      <h4>Что это</h4>
+      <p>Горизонтальные зоны, где цена уже разворачивалась. <b>Поддержка</b> — «пол», откуда цена отскакивает вверх. <b>Сопротивление</b> — «потолок», откуда падает вниз.</p>
+      <h4>Как строить</h4>
+      <ul>
+        <li>Откройте дневной график и найдите 2–3 явных разворота.</li>
+        <li>Проведите <b>зону</b>, а не тонкую линию — цена редко реагирует точно.</li>
+        <li>Чем больше касаний — тем сильнее уровень.</li>
+        <li>Старый уровень, который держал месяцами, важнее свежего.</li>
+      </ul>
+      <h4>Логика торговли</h4>
+      <ul>
+        <li><b>Отбой</b> от поддержки → покупка, стоп под уровнем.</li>
+        <li><b>Пробой</b> сопротивления с закреплением → вход по тренду.</li>
+        <li><b>Ложный пробой</b> (пробила и вернулась) → сильный сигнал в обратную сторону.</li>
+      </ul>
+      <h4>Правило зеркала</h4><p>Пробитое сопротивление становится поддержкой, и наоборот.</p>
+      <h4 class="warn">Ошибка новичка</h4><p>20 линий на графике. Оставьте 3–4 значимых уровня.</p>
+    </div></div>
+    <div class="hint">Нажмите, чтобы раскрыть</div>
+  </div>
+
+  <!-- 3 -->
+  <div class="card">
+    <div class="num">03</div><div class="icon">📉</div>
+    <h3>Скользящие средние (MA/EMA)</h3>
+    <p class="short">Сглаживают цену, показывают тренд.</p>
+    <span class="tag">Индикатор</span>
+    <div class="details"><div class="details-inner">
+
+      <svg class="figure" viewBox="0 0 300 120" xmlns="http://www.w3.org/2000/svg">
+        <polyline points="20,90 60,80 100,70 140,55 180,45 220,35 260,30"
+                  fill="none" stroke="#8b949e" stroke-width="1.5"/>
+        <polyline points="20,95 60,85 100,75 140,65 180,52 220,42 260,35"
+                  fill="none" stroke="#00d97e" stroke-width="2.5"/>
+        <polyline points="20,100 60,92 100,84 140,76 180,65 220,55 260,47"
+                  fill="none" stroke="#f0883e" stroke-width="2.5"/>
+        <text x="25" y="20" fill="#8b949e" font-size="9">цена</text>
+        <text x="200" y="20" fill="#00d97e" font-size="9">EMA50</text>
+        <text x="250" y="20" fill="#f0883e" font-size="9">EMA200</text>
+      </svg>
+
+      <h4>Что это</h4>
+      <p>Линия, усредняющая цену за N периодов и сглаживающая шум. <b>SMA</b> — простое среднее, <b>EMA</b> — с весом свежих цен (быстрее реагирует).</p>
+      <h4>Популярные периоды</h4>
+      <ul>
+        <li><b>20</b> — краткосрочная торговля.</li>
+        <li><b>50</b> — среднесрок.</li>
+        <li><b>200</b> — долгосрочный тренд, «линия рынка».</li>
+      </ul>
+      <h4>Применение</h4>
+      <ul>
+        <li>Цена выше MA200 — бычий рынок, ниже — медвежий.</li>
+        <li><b>Золотой крест</b> — MA50 пересекает MA200 вверх, бычий сигнал.</li>
+        <li><b>Крест смерти</b> — MA50 ниже MA200, медвежий сигнал.</li>
+        <li>В тренде MA работает как динамическая поддержка — зона входа.</li>
+      </ul>
+      <h4 class="warn">Ошибка новичка</h4><p>Использовать MA на флэте — там куча ложных сигналов.</p>
+    </div></div>
+    <div class="hint">Нажмите, чтобы раскрыть</div>
+  </div>
+
+  <!-- 4 -->
+  <div class="card">
+    <div class="num">04</div><div class="icon">⚡</div>
+    <h3>RSI (индекс силы)</h3>
+    <p class="short">Осциллятор 0–100.</p>
+    <span class="tag">Индикатор</span>
+    <div class="details"><div class="details-inner">
+
+      <svg class="figure" viewBox="0 0 300 120" xmlns="http://www.w3.org/2000/svg">
+        <rect x="20" y="20" width="260" height="25" fill="#f6465d" opacity="0.15"/>
+        <rect x="20" y="75" width="260" height="25" fill="#00d97e" opacity="0.15"/>
+        <line x1="20" y1="45" x2="280" y2="45" stroke="#f6465d" stroke-dasharray="4"/>
+        <line x1="20" y1="75" x2="280" y2="75" stroke="#00d97e" stroke-dasharray="4"/>
+        <polyline points="20,60 60,35 100,20 140,50 180,70 220,95 260,60"
+                  fill="none" stroke="#e6edf3" stroke-width="2"/>
+        <text x="240" y="18" fill="#f6465d" font-size="9">70</text>
+        <text x="240" y="108" fill="#00d97e" font-size="9">30</text>
+      </svg>
+
+      <h4>Что это</h4>
+      <p>Осциллятор от 0 до 100, измеряющий скорость и силу движения цены. Период по умолчанию — 14.</p>
+      <h4>Зоны</h4>
+      <ul>
+        <li><b>Выше 70</b> — перекупленность, возможен откат.</li>
+        <li><b>Ниже 30</b> — перепроданность, возможен отскок.</li>
+        <li><b>50</b> — нейтраль, разделяет быков и медведей.</li>
+      </ul>
+      <h4>Продвинутые приёмы</h4>
+      <ul>
+        <li><b>Дивергенция</b> — цена делает новый максимум, а RSI — нет. Один из сильнейших сигналов разворота.</li>
+        <li>В сильном тренде RSI держится в диапазоне 40–80, а не 30–70.</li>
+        <li>Пробой уровня 50 вверх = усиление быков.</li>
+      </ul>
+      <h4 class="warn">Ошибка новичка</h4><p>Шортить только потому, что RSI выше 70 — тренд может длиться неделями.</p>
+    </div></div>
+    <div class="hint">Нажмите, чтобы раскрыть</div>
+  </div>
+
+  <!-- 5 -->
+  <div class="card">
+    <div class="num">05</div><div class="icon">🔁</div>
+    <h3>MACD</h3>
+    <p class="short">Импульс на основе двух EMA.</p>
+    <span class="tag">Индикатор</span>
+    <div class="details"><div class="details-inner">
+
+      <svg class="figure" viewBox="0 0 300 120" xmlns="http://www.w3.org/2000/svg">
+        <line x1="20" y1="60" x2="280" y2="60" stroke="#30363d"/>
+        <polyline points="20,70 60,55 100,40 140,60 180,75 220,55 260,35"
+                  fill="none" stroke="#00d97e" stroke-width="2"/>
+        <polyline points="20,75 60,60 100,50 140,55 180,70 220,60 260,45"
+                  fill="none" stroke="#f0883e" stroke-width="2" stroke-dasharray="4"/>
+        <g fill="#8b949e">
+          <rect x="30" y="62" width="6" height="10"/><rect x="50" y="58" width="6" height="14"/>
+          <rect x="70" y="50" width="6" height="20"/><rect x="90" y="45" width="6" height="22"/>
+          <rect x="110" y="52" width="6" height="16"/><rect x="130" y="58" width="6" height="8"/>
+          <rect x="150" y="60" width="6" height="12"/><rect x="170" y="62" width="6" height="14"/>
+          <rect x="190" y="58" width="6" height="10"/><rect x="210" y="52" width="6" height="18"/>
+          <rect x="230" y="45" width="6" height="22"/><rect x="250" y="40" width="6" height="25"/>
+        </g>
+        <text x="25" y="20" fill="#00d97e" font-size="9">MACD</text>
+        <text x="200" y="20" fill="#f0883e" font-size="9">сигнальная</text>
+      </svg>
+
+      <h4>Из чего состоит</h4>
+      <ul>
+        <li><b>Линия MACD</b> = EMA12 − EMA26.</li>
+        <li><b>Сигнальная</b> = EMA9 от MACD.</li>
+        <li><b>Гистограмма</b> = разница линий (столбики).</li>
+      </ul>
+      <h4>Сигналы</h4>
+      <ul>
+        <li>Пересечение линии MACD и сигнальной вверх — покупка, вниз — продажа.</li>
+        <li>Рост гистограммы — импульс усиливается.</li>
+        <li>Пересечение нулевой линии вверх — подтверждение бычьего тренда.</li>
+        <li><b>Дивергенция</b> MACD и цены — сигнал разворота.</li>
+      </ul>
+      <h4>Особенность</h4>
+      <p>MACD <b>запаздывает</b> (построен на средних), поэтому лучше работает на старших таймфреймах и в связке с уровнями.</p>
+      <h4 class="warn">Ошибка новичка</h4><p>Ловить все пересечения на 5-минутке — до 80% ложных сигналов.</p>
+    </div></div>
+    <div class="hint">Нажмите, чтобы раскрыть</div>
+  </div>
+
+  <!-- 6 -->
+  <div class="card">
+    <div class="num">06</div><div class="icon">📐</div>
+    <h3>Уровни Фибоначчи</h3>
+    <p class="short">Зоны отката 23.6–78.6%.</p>
+    <span class="tag">Анализ</span>
+    <div class="details"><div class="details-inner">
+
+      <svg class="figure" viewBox="0 0 300 120" xmlns="http://www.w3.org/2000/svg">
+        <line x1="20" y1="20" x2="280" y2="20" stroke="#8b949e" stroke-dasharray="3"/>
+        <line x1="20" y1="35" x2="280" y2="35" stroke="#00d97e"/>
+        <line x1="20" y1="55" x2="280" y2="55" stroke="#00d97e"/>
+        <line x1="20" y1="70" x2="280" y2="70" stroke="#00d97e"/>
+        <line x1="20" y1="85" x2="280" y2="85" stroke="#00b4d8"/>
+        <line x1="20" y1="100" x2="280" y2="100" stroke="#8b949e" stroke-dasharray="3"/>
+        <text x="230" y="33" fill="#00d97e" font-size="9">23.6%</text>
+        <text x="230" y="53" fill="#00d97e" font-size="9">38.2%</text>
+        <text x="230" y="68" fill="#00d97e" font-size="9">50%</text>
+        <text x="230" y="83" fill="#00b4d8" font-size="9">61.8%</text>
+        <text x="230" y="98" fill="#8b949e" font-size="9">78.6%</text>
+      </svg>
+
+      <h4>Что это</h4>
+      <p>Инструмент поиска зон отката после сильного движения. Основан на «золотом сечении».</p>
+      <h4>Ключевые уровни</h4>
+      <ul>
+        <li><b>23.6%</b>, <b>38.2%</b>, <b>50%</b>, <b>61.8%</b>, <b>78.6%</b>.</li>
+        <li><b>61.8%</b> — «золотая зона», самая сильная.</li>
+      </ul>
+      <h4>Как строить</h4>
+      <ul>
+        <li>Найдите явный импульс (тренд-движение).</li>
+        <li>Натяните сетку от свинг-лоу до свинг-хай (для аптренда).</li>
+        <li>Уровни покажут, где цена может «отдохнуть» перед продолжением.</li>
+      </ul>
+      <h4>Логика торговли</h4>
+      <ul>
+        <li>В аптренде ждём откат к 38.2–61.8% и сигнал на покупку.</li>
+        <li>Расширения 127–161% — цели для тейк-профита.</li>
+      </ul>
+      <h4 class="warn">Ошибка новичка</h4><p>Натягивать сетку на любой хаотичный участок — уровни теряют смысл.</p>
+    </div></div>
+    <div class="hint">Нажмите, чтобы раскрыть</div>
+  </div>
+   <!-- 7 -->
+  <div class="card">
+    <div class="num">07</div><div class="icon">🛡️</div>
+    <h3>Стоп-лосс</h3>
+    <p class="short">Главный инструмент выживания.</p>
+    <span class="tag risk">Риск-менеджмент</span>
+    <div class="details"><div class="details-inner">
+
+      <svg class="figure" viewBox="0 0 300 120" xmlns="http://www.w3.org/2000/svg">
+        <line x1="20" y1="50" x2="280" y2="50" stroke="#8b949e" stroke-dasharray="3"/>
+        <text x="25" y="45" fill="#8b949e" font-size="9">Вход</text>
+        <line x1="20" y1="30" x2="280" y2="30" stroke="#00d97e" stroke-width="2"/>
+        <text x="25" y="25" fill="#00d97e" font-size="9">Тейк-профит</text>
+        <line x1="20" y1="85" x2="280" y2="85" stroke="#f6465d" stroke-width="2"/>
+        <text x="25" y="100" fill="#f6465d" font-size="9">Стоп-лосс</text>
+        <rect x="20" y="50" width="260" height="35" fill="#f6465d" opacity="0.1"/>
+        <rect x="20" y="30" width="260" height="20" fill="#00d97e" opacity="0.1"/>
+      </svg>
+
+      <h4>Что это</h4>
+      <p>Ордер, автоматически закрывающий сделку при заданном убытке. <b>Главный инструмент выживания трейдера.</b></p>
+      <h4>Зачем нужен</h4>
+      <ul>
+        <li>Ограничивает потери на одну сделку.</li>
+        <li>Убирает эмоции: решение принято заранее.</li>
+        <li>Позволяет пережить серию убытков и остаться в игре.</li>
+      </ul>
+      <h4>Правила установки</h4>
+      <ul>
+        <li>Ставьте за уровнем/структурой, а не «на круглой цифре».</li>
+        <li><b>Риск на сделку — 1–2% депозита</b>, максимум 3%.</li>
+        <li>Объём позиции считается от стопа.</li>
+        <li>Двигайте стоп только в безубыток или в плюс.</li>
+      </ul>
+      <h4>Формула объёма</h4>
+      <p>Объём = (Депозит × Риск%) ÷ Расстояние до стопа.</p>
+      <p>Пример: депозит $1000, риск 1% = $10. Стоп 50 пунктов → объём такой, чтобы 50 пунктов = $10.</p>
+      <h4 class="warn">Ошибка новичка</h4><p>Торговать без стопа «потому что рынок вернётся». Один раз может обнулить депозит.</p>
+    </div></div>
+    <div class="hint">Нажмите, чтобы раскрыть</div>
+  </div>
+
+  <!-- 8 -->
+    <div class="card">
+    <div class="num">08</div><div class="icon">🎯</div>
+    <h3>Тейк-профит и R:R</h3>
+    <p class="short">Сколько рискуете ради сколько зарабатываете.</p>
+    <span class="tag risk">Риск-менеджмент</span>
+    <div class="details"><div class="details-inner">
+
+      <svg class="figure" viewBox="0 0 300 120" xmlns="http://www.w3.org/2000/svg">
+        <line x1="20" y1="60" x2="280" y2="60" stroke="#8b949e" stroke-dasharray="3"/>
+        <line x1="20" y1="30" x2="280" y2="30" stroke="#00d97e" stroke-width="2"/>
+        <line x1="20" y1="90" x2="280" y2="90" stroke="#f6465d" stroke-width="2"/>
+        <text x="200" y="25" fill="#00d97e" font-size="10">+2R (прибыль)</text>
+        <text x="200" y="105" fill="#f6465d" font-size="10">−1R (риск)</text>
+        <text x="200" y="55" fill="#8b949e" font-size="10">Вход</text>
+        <line x1="150" y1="60" x2="150" y2="30" stroke="#00d97e" stroke-width="2"/>
+        <line x1="150" y1="60" x2="150" y2="90" stroke="#f6465d" stroke-width="2"/>
+      </svg>
+
+      <h4>Что это</h4>
+      <p><b>Тейк-профит</b> — заранее заданная точка фиксации прибыли. <b>R:R</b> (risk/reward) — сколько вы рискуете ради того, сколько потенциально зарабатываете.</p>
+      <h4>Формула</h4>
+      <p>R:R = (Цель − Вход) ÷ (Вход − Стоп).</p>
+      <p>Пример: вход 100, стоп 95 (риск 5), цель 115 (прибыль 15) → R:R = 1:3.</p>
+      <h4>Стандарты</h4>
+      <ul>
+        <li><b>1:2</b> — комфортный минимум.</li>
+        <li><b>1:3+</b> — прибыль даже при винрейте 30–35%.</li>
+        <li><b>1:1 и ниже</b> — требует очень высокого винрейта, обычно невыгодно.</li>
+      </ul>
+      <h4>Математика выживания</h4>
+      <ul>
+        <li>При R:R 1:2 и винрейте 50% вы в плюсе.</li>
+        <li>При R:R 1:3 достаточно винрейта 30–35%.</li>
+      </ul>
+      <h4>Приёмы</h4>
+      <ul>
+        <li><b>Частичная фиксация</b> — закрыть половину на 1:1, остальное вести трейлинг-стопом.</li>
+        <li><b>Трейлинг-стоп</b> — подтягивать стоп за ценой.</li>
+      </ul>
+      <h4 class="warn">Ошибка новичка</h4><p>Брать 2 пункта прибыли и держать 50 убытка. Один такой убыток съедает 25 прибыльных сделок.</p>
+    </div></div>
+    <div class="hint">Нажмите, чтобы раскрыть</div>
+  </div>
+  
+  <!-- 9 -->
+  <div class="card">
+    <div class="num">09</div><div class="icon">📰</div>
+    <h3>Экономический календарь</h3>
+    <p class="short">Новости двигают рынок сильнее графиков.</p>
+    <span class="tag">Фундаментал</span>
+    <div class="details"><div class="details-inner">
+
+      <svg class="figure" viewBox="0 0 300 120" xmlns="http://www.w3.org/2000/svg">
+        <rect x="20" y="20" width="260" height="22" fill="#f6465d" opacity="0.15"/>
+        <text x="30" y="35" fill="#f6465d" font-size="10">🔴 FOMC — ставка ФРС</text>
+        <rect x="20" y="50" width="260" height="22" fill="#f0883e" opacity="0.15"/>
+        <text x="30" y="65" fill="#f0883e" font-size="10">🟠 CPI — инфляция</text>
+        <rect x="20" y="80" width="260" height="22" fill="#00d97e" opacity="0.15"/>
+        <text x="30" y="95" fill="#00d97e" font-size="10">🟢 NFP — занятость</text>
+      </svg>
+
+      <h4>Что это</h4>
+      <p>Расписание макроэкономических событий, которые двигают рынки. Новости часто ломают любую технику.</p>
+      <h4>Ключевые события</h4>
+      <ul>
+        <li><b>Ставка ФРС (FOMC)</b> — сильнейший драйвер для валют, индексов, золота, крипты.</li>
+        <li><b>Инфляция (CPI, PPI)</b> — определяет ожидания по ставкам.</li>
+        <li><b>Non-Farm Payrolls (NFP)</b> — занятость в США, первая пятница месяца, высокая волатильность.</li>
+        <li><b>ВВП, PMI, розничные продажи</b> — состояние экономики.</li>
+        <li><b>Отчёты компаний</b> — для акций.</li>
+      </ul>
+      <h4>Как использовать</h4>
+      <ul>
+        <li>Проверяйте календарь утром и перед входом в сделку.</li>
+        <li><b>Красные</b> события (высокая важность) — не открывайте позиции за 15–30 мин до и после.</li>
+        <li>Не торгуйте на новости без опыта — спреды расширяются, проскальзывание огромное.</li>
+        <li>Открытые позиции защищайте стопом или сокращайте.</li>
+      </ul>
+      <h4>Где смотреть</h4>
+      <p>Investing.com, Forex Factory, календарь брокера.</p>
+      <h4 class="warn">Ошибка новичка</h4><p>Входить в сделку за минуту до выхода CPI и ловить «сюрприз» на весь депозит.</p>
+    </div></div>
+    <div class="hint">Нажмите, чтобы раскрыть</div>
+  </div>
+
+  <!-- 10 -->
+  <div class="card">
+    <div class="num">10</div><div class="icon">📓</div>
+    <h3>Торговый журнал</h3>
+    <p class="short">Превращает хаос в систему.</p>
+    <span class="tag">Дисциплина</span>
+    <div class="details"><div class="details-inner">
+
+      <svg class="figure" viewBox="0 0 300 120" xmlns="http://www.w3.org/2000/svg">
+        <rect x="40" y="15" width="220" height="90" rx="6" fill="none" stroke="#8b949e"/>
+        <line x1="40" y1="35" x2="260" y2="35" stroke="#8b949e"/>
+        <text x="55" y="28" fill="#8b949e" font-size="9">Дата</text>
+        <text x="115" y="28" fill="#8b949e" font-size="9">Вход</text>
+        <text x="165" y="28" fill="#8b949e" font-size="9">Стоп</text>
+        <text x="215" y="28" fill="#8b949e" font-size="9">Результат</text>
+        <line x1="110" y1="15" x2="110" y2="105" stroke="#8b949e"/>
+        <line x1="160" y1="15" x2="160" y2="105" stroke="#8b949e"/>
+        <line x1="210" y1="15" x2="210" y2="105" stroke="#8b949e"/>
+        <text x="55" y="55" fill="#e6edf3" font-size="9">01.11</text>
+        <text x="115" y="55" fill="#e6edf3" font-size="9">105</text>
+        <text x="165" y="55" fill="#e6edf3" font-size="9">100</text>
+        <text x="220" y="55" fill="#00d97e" font-size="9">+2R</text>
+        <text x="55" y="75" fill="#e6edf3" font-size="9">02.11</text>
+        <text x="115" y="75" fill="#e6edf3" font-size="9">98</text>
+        <text x="165" y="75" fill="#e6edf3" font-size="9">103</text>
+        <text x="220" y="75" fill="#f6465d" font-size="9">−1R</text>
+      </svg>
+
+      <h4>Что это</h4>
+      <p>Дневник каждой сделки. Превращает хаотичную торговлю в <b>систему</b> и ускоряет рост в разы.</p>
+      <h4>Что фиксировать</h4>
+      <ul>
+        <li>Дата, время, инструмент, таймфрейм.</li>
+        <li>Направление (лонг/шорт), вход, стоп, тейк.</li>
+        <li><b>Причина входа</b> — какой сигнал/паттерн/уровень.</li>
+        <li>Результат в пунктах, R и деньгах.</li>
+        <li>Скриншот графика до и после.</li>
+        <li><b>Эмоции</b> — страх, жадность, уверенность, FOMO.</li>
+        <li>Соблюдены ли правила стратегии.</li>
+      </ul>
+      <h4>Как анализировать</h4>
+      <ul>
+        <li>Раз в неделю/месяц считайте винрейт, средний R:R, просадку.</li>
+        <li>Ищите паттерны ошибок — «все убытки против тренда» и т.п.</li>
+        <li>Убирайте из стратегии то, что стабильно не работает.</li>
+      </ul>
+      <h4>Формат</h4>
+      <p>Excel/Google Sheets, Notion, сервисы Edgewonk, TraderSync или обычная тетрадь.</p>
+      <h4 class="warn">Ошибка новичка</h4><p>«Записывать потом» — потом не наступает. Записывайте сразу после закрытия сделки.</p>
+    </div></div>
+    <div class="hint">Нажмите, чтобы раскрыть</div>
+  </div>
+
+</main>
+
+<section class="about">
+  <div class="about-wrap">
+    <div class="about-col">
+      <h2>👥 О нас</h2>
+      <p class="about-lead">Мы — команда трейдеров и разработчиков, которая делает сложное простым.</p>
+      <p><b>TradeTop</b> — образовательный проект практикующих трейдеров. Мы собрали опыт реальной торговли и превратили его в понятные материалы без воды и «сигналов на миллион».</p>
+      <h4>Наши принципы</h4>
+      <ul class="about-list">
+        <li><b>Честность.</b> Говорим и о прибыли, и об убытках.</li>
+        <li><b>Практика.</b> Только то, что реально используется.</li>
+        <li><b>Простота.</b> Сложное — человеческим языком.</li>
+        <li><b>Без обещаний.</b> Никаких «100% сигналов».</li>
+      </ul>
+    </div>
+    <div class="about-col">
+      <h2>🌐 О сайте</h2>
+      <p class="about-lead">Бесплатная база знаний по трейдингу.</p>
+      <p>ТОП-10 инструментов с подробным разбором, понятные объяснения, разбор ошибок новичков и золотые правила трейдера.</p>
+      <h4>Что делает сайт удобным</h4>
+      <ul class="about-list">
+        <li>🎨 Тёмный интерфейс как в терминалах.</li>
+        <li>📱 Адаптивность под телефон.</li>
+        <li>🔍 Раскрывающиеся карточки.</li>
+        <li>🧮 Калькулятор риска и демо-график.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="rules">
+  <h2>🏆 Золотые правила трейдера</h2>
+  <ul>
+    <li>Управляйте риском, а не прибылью</li>
+    <li>Не торгуйте на эмоциях</li>
+    <li>Дисциплина важнее стратегии</li>
+    <li>Ведите журнал каждой сделки</li>
+    <li>Никогда не рискуйте деньгами, которые не можете потерять</li>
+  </ul>
+</section>
+
+<footer>
+  ⚠️ Материал носит образовательный характер и не является инвестиционной рекомендацией.<br>
+  Трейдинг связан с риском потери капитала. Торгуйте ответственно.
+</footer>
+
+<script>
+/* ===== 1. Раскрытие карточек ===== */
+document.querySelectorAll('.card').forEach(card => {
+  card.addEventListener('click', () => card.classList.toggle('open'));
+});
+
+/* ===== 2. Анимация появления при скролле ===== */
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.15 });
+document.querySelectorAll('.card').forEach(c => observer.observe(c));
+
+/* ===== 3. Переключение темы ===== */
+function toggleTheme() {
+  document.body.classList.toggle('light');
+  document.querySelector('.theme-btn').textContent =
+    document.body.classList.contains('light') ? '☀️' : '🌙';
+}
+
+/* ===== 4. Калькулятор риска ===== */
+const dep = document.getElementById('dep');
+const risk = document.getElementById('risk');
+const stop = document.getElementById('stop');
+const out = document.getElementById('calcOut');
+
+function calc() {
+  const d = parseFloat(dep.value) || 0;
+  const r = parseFloat(risk.value) || 0;
+  const s = parseFloat(stop.value) || 0;
+  if (s <= 0) { out.textContent = 'Объём: —'; return; }
+  const riskMoney = d * r / 100;
+  const lot = riskMoney / s;
+  out.textContent = `Риск: $${riskMoney.toFixed(2)} · Объём: ${lot.toFixed(3)}`;
+}
+[dep, risk, stop].forEach(el => el.addEventListener('input', calc));
+calc();
+
+/* ===== 5. Мини-график на canvas ===== */
+const canvas = document.getElementById('chart');
+const ctx = canvas.getContext('2d');
+
+function drawChart() {
+  const w = canvas.width = canvas.offsetWidth * 2;
+  const h = canvas.height = 320;
+  ctx.clearRect(0, 0, w, h);
+
+  const points = [];
+  let price = 100;
+  for (let i = 0; i < 60; i++) {
+    price += (Math.random() - 0.48) * 6;
+    points.push(price);
+  }
+  const min = Math.min(...points), max = Math.max(...points);
+  const pad = 20;
+  const step = w/ (points.length - 1);
+
+  ctx.beginPath();
+  points.forEach((p, i) => {
+    const x = i * step;
+    const y = h - pad - ((p - min) / (max - min || 1)) * (h - pad * 2);
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  });
+  ctx.strokeStyle = '#00d97e';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, 'rgba(0,217,126,0.3)');
+  grad.addColorStop(1, 'rgba(0,217,126,0)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+}
+drawChart();
+window.addEventListener('resize', drawChart);
+
+/* ===== 6. ЗВУК ПРИ КЛИКАХ ===== */
+let audioCtx = null;
+
+function playClick() {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.08);
+
+    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.12);
+  } catch (e) { }
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('button, .card, .theme-btn, .tag')) {
+    playClick();
+  }
+});
+</script>
+
+</body>
+</html>
